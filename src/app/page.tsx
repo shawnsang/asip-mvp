@@ -48,7 +48,9 @@ export default function Home() {
     return matchesSearch && matchesIndustry;
   });
 
-  const industries = [...new Set(cases.map((c: Case) => c.industry))];
+  const industries = Array.from(
+    new Set(cases.map((c: Case) => c.industry))
+  );
 
   return (
     <main className="min-h-screen">
