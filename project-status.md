@@ -2,7 +2,7 @@
 
 ## 开发进度
 
-14 tasks (5 done, 5 open)
+14 tasks (10 done, 4 open)
 
 ### 待完成任务
 
@@ -28,10 +28,13 @@
   - ✔ 销售话术生成
   - ✔ ROI 计算
 
-### 2. 开发环境搭建
-- ✔ 2.1 注册GitHub账号
-- ◻ 2.2 注册云服务账号 (Supabase, 阿里云)
-- ◻ 2.3 安装开发工具
+### 数据采集自动化 (新增)
+
+- ✔ #11 设计自动化数据抓取架构
+- ✔ #12 实现 GitHub 自动抓取（无Token版）
+- ✔ #13 添加 Reddit 数据源抓取
+- ✔ #14 添加 Hacker News 数据抓取
+- ✔ #15 创建统一数据导入脚本
 
 ---
 
@@ -44,14 +47,48 @@
 - [x] 案例详情弹窗
 - [x] 基础搜索和行业筛选
 - [x] LLM 函数封装
+- [x] AI Copilot 聊天界面
+- [x] ROI 计算器
+- [x] 增强搜索筛选
+- [x] 自动化数据采集
+- [x] 多数据源支持
 
 ### 开发中
-- [ ] AI Copilot 聊天界面
-- [ ] ROI 计算器
-- [ ] 增强搜索筛选
-
-### 待开发
 - [ ] 用户认证
 - [ ] 收藏功能
 - [ ] 数据导出
 - [ ] 管理员后台
+
+---
+
+## 数据统计
+
+- 当前案例数: 443 条
+- 数据来源: GitHub, Hacker News
+- 更新时间: 2026-02-19
+
+---
+
+## 使用说明
+
+### 采集数据
+```bash
+# 采集 GitHub
+node scripts/collect-all.js github
+
+# 采集 Hacker News
+node scripts/collect-all.js hackernews
+
+# 采集所有
+node scripts/collect-all.js
+```
+
+### 导入数据
+```bash
+node scripts/import-merged.js
+```
+
+### 结构化处理
+```bash
+node scripts/extract-structure.js
+```

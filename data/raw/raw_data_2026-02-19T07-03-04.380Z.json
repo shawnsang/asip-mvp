@@ -1,0 +1,107 @@
+[
+  {
+    "source": "HackerNews",
+    "source_type": "story",
+    "source_url": "https://tailscale.com/blog/peer-relays-ga",
+    "project_name": "Tailscale Peer Relays is now generally available",
+    "description": "Tailscale Peer Relays is now generally available",
+    "stars": 378,
+    "author": "sz4kerto",
+    "created_at": "2026-02-18T16:46:12.000Z",
+    "topics": [
+      "HackerNews",
+      "讨论"
+    ],
+    "collected_at": "2026-02-19T07:03:12.550Z"
+  },
+  {
+    "source": "HackerNews",
+    "source_type": "story",
+    "source_url": "https://cepr.org/voxeu/columns/how-ai-affecting-productivity-and-jobs-europe",
+    "project_name": "How AI is affecting productivity and jobs in Europe",
+    "description": "How AI is affecting productivity and jobs in Europe",
+    "stars": 70,
+    "author": "pseudolus",
+    "created_at": "2026-02-19T00:22:45.000Z",
+    "topics": [
+      "HackerNews",
+      "讨论"
+    ],
+    "collected_at": "2026-02-19T07:03:14.277Z"
+  },
+  {
+    "source": "HackerNews",
+    "source_type": "story",
+    "source_url": "https://github.com/a11ce/docker-lisp",
+    "project_name": "Show HN: A Lisp where each function call runs a Docker container",
+    "description": "Show HN: A Lisp where each function call runs a Docker container",
+    "stars": 14,
+    "author": "a11ce",
+    "created_at": "2026-02-19T04:19:20.000Z",
+    "topics": [
+      "HackerNews",
+      "讨论"
+    ],
+    "collected_at": "2026-02-19T07:03:19.350Z"
+  },
+  {
+    "source": "HackerNews",
+    "source_type": "story",
+    "source_url": "https://devblogs.microsoft.com/azure-sql/langchain-with-sqlvectorstore-example/",
+    "project_name": "Microsoft guide to pirating Harry Potter for LLM training (2024) [removed]",
+    "description": "<a href=\"https:&#x2F;&#x2F;archive.is&#x2F;D9vEN\" rel=\"nofollow\">https:&#x2F;&#x2F;archive.is&#x2F;D9vEN</a>",
+    "stars": 264,
+    "author": "anonymous908213",
+    "created_at": "2026-02-18T23:19:29.000Z",
+    "topics": [
+      "HackerNews",
+      "讨论"
+    ],
+    "collected_at": "2026-02-19T07:03:23.293Z"
+  },
+  {
+    "source": "HackerNews",
+    "source_type": "story",
+    "source_url": "https://annas-archive.li/blog/llms-txt.html",
+    "project_name": "If you’re an LLM, please read this",
+    "description": "If you’re an LLM, please read this",
+    "stars": 830,
+    "author": "soheilpro",
+    "created_at": "2026-02-18T07:18:50.000Z",
+    "topics": [
+      "HackerNews",
+      "讨论"
+    ],
+    "collected_at": "2026-02-19T07:03:25.504Z"
+  },
+  {
+    "source": "HackerNews",
+    "source_type": "story",
+    "source_url": "https://georgeguimaraes.com/your-agent-orchestrator-is-just-a-bad-clone-of-elixir/",
+    "project_name": "Your Agent Framework Is Just a Bad Clone of Elixir",
+    "description": "Your Agent Framework Is Just a Bad Clone of Elixir",
+    "stars": 27,
+    "author": "ellieh",
+    "created_at": "2026-02-18T22:37:35.000Z",
+    "topics": [
+      "HackerNews",
+      "讨论"
+    ],
+    "collected_at": "2026-02-19T07:03:26.310Z"
+  },
+  {
+    "source": "HackerNews",
+    "source_type": "story",
+    "source_url": "https://resobscura.substack.com/p/what-is-happening-to-writing",
+    "project_name": "What is happening to writing? Cognitive debt, Claude Code, the space around AI",
+    "description": "What is happening to writing? Cognitive debt, Claude Code, the space around AI",
+    "stars": 122,
+    "author": "benbreen",
+    "created_at": "2026-02-18T14:59:16.000Z",
+    "topics": [
+      "HackerNews",
+      "讨论"
+    ],
+    "collected_at": "2026-02-19T07:03:33.287Z"
+  }
+]
