@@ -57,6 +57,23 @@ async function getRepositoryReadme(owner, repo) {
   }
 }
 
+// 敏感词过滤列表
+const SENSITIVE_KEYWORDS = [
+  'dictatorship', 'dictator', 'communism', 'communists',
+  'terrorism', 'terrorist', 'extremism', 'extremist',
+  'porn', 'xxx', 'sex', 'adult', 'nsfw',
+  'malware', 'virus', 'hack', 'exploit',
+  'drug', 'weapon', 'gun', 'bomb',
+];
+
+/**
+ * 检查项目是否包含敏感内容
+ */
+function isSensitiveProject(projectName, description, topics) {
+  const text = `${projectName} ${description || ''} ${(topics || []).join(' ')}`.toLowerCase();
+  return SENSITIVE_KEYWORDS.some(keyword => text.includes(keyword));
+}
+
 /**
  * GitHub 数据抓取器 (无 Token 版)
  */
@@ -65,6 +82,7 @@ async function collectGitHub() {
 
   const results = [];
   const seenUrls = new Set();
+  let filteredCount = 0;
 
   for (const query of config.github.searchQueries) {
     console.log(`📊 搜索: "${query}"`);
@@ -87,6 +105,14 @@ async function collectGitHub() {
 
         for (const repo of repos) {
           if (seenUrls.has(repo.html_url)) continue;
+
+          // 过滤敏感项目
+          if (isSensitiveProject(repo.name, repo.description, repo.topics)) {
+            console.log(`  ⚠️ 过滤敏感项目: ${repo.name}`);
+            filteredCount++;
+            continue;
+          }
+
           seenUrls.add(repo.html_url);
 
           // 基本信息
@@ -139,7 +165,8 @@ async function collectGitHub() {
     }
   }
 
-  console.log(`\n✅ GitHub: 共采集 ${results.length} 个项目`);
+  const withReadme = results.filter(r => r.readme_content).length;
+  console.log(`\n✅ GitHub: 共采集 ${results.length} 个项目 (过滤 ${filteredCount} 个敏感项目)，其中 ${withReadme} 个包含 README`);
   return results;
 }
 

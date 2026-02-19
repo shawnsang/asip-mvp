@@ -42,7 +42,13 @@ async function callQwen(prompt) {
     );
     return response.data.output.choices[0].message.content;
   } catch (error) {
-    console.error('Qwen API Error:', error.response?.data || error.message);
+    const errData = error.response?.data;
+    // 检查是否是内容安全错误
+    if (errData?.code === 'DataInspectionFailed' || errData?.message?.includes('inappropriate')) {
+      console.error('    ⚠️ 内容安全检查失败，跳过该项目');
+      return null; // 返回 null 让调用方处理
+    }
+    console.error('Qwen API Error:', errData || error.message);
     throw new Error('Failed to call Qwen API');
   }
 }
@@ -182,8 +188,8 @@ async function main() {
         console.log(`    ✓ ${result.business_function || 'N/A'} | ${result.implementation_complexity || 'N/A'}`);
         success++;
       } else {
-        console.log(`    ✗ LLM 返回为空`);
-        failed++;
+        console.log(`    ⊘ 无结果 (跳过)`);
+        skipped++;
       }
 
       // 避免 API 限流
@@ -195,7 +201,7 @@ async function main() {
     }
   }
 
-  console.log(`\n📊 提取完成: 成功 ${success}, 失败 ${failed}`);
+  console.log(`\n📊 提取完成: 成功 ${success}, 跳过 ${skipped}, 失败 ${failed}`);
   console.log('✅ 处理完成!');
 }
 
