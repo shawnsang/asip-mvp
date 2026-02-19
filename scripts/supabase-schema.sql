@@ -1,13 +1,13 @@
 -- ASIP 数据库表结构
 -- 在 Supabase SQL Editor 中执行
 
--- 1. 案例表 (cases)
+-- 1. 案例表 (cases) - 增强版
 CREATE TABLE IF NOT EXISTS cases (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_name TEXT NOT NULL,
   industry TEXT,
   use_case TEXT,
-  pain_point TEXT,
+  pain_point TEXT,  -- 解决的痛点
   technology TEXT[],  -- 数组类型存储技术栈
   outcome TEXT,
   source TEXT NOT NULL,  -- GitHub, Reddit, Blog 等
@@ -15,6 +15,15 @@ CREATE TABLE IF NOT EXISTS cases (
   raw_data JSONB,  -- 原始数据备份
   quality_score FLOAT DEFAULT 0,  -- 质量评分 0-1
   is_verified BOOLEAN DEFAULT FALSE,
+
+  -- LLM 结构化抽取的新字段
+  solution_approach TEXT,  -- 解决方案思路
+  business_function TEXT,  -- 业务功能领域
+  target_company TEXT,  -- 目标企业类型
+  implementation_complexity TEXT,  -- 实施复杂度: low/medium/high
+  competitive_advantage TEXT,  -- 竞争优势
+  use_case_summary TEXT,  -- 用例摘要
+
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

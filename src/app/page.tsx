@@ -14,6 +14,13 @@ interface Case {
   source_url: string;
   quality_score: number;
   raw_data?: any;
+  // LLM 结构化抽取的新字段
+  solution_approach?: string;
+  business_function?: string;
+  target_company?: string;
+  implementation_complexity?: string;
+  competitive_advantage?: string;
+  use_case_summary?: string;
 }
 
 interface ChatMessage {
@@ -416,7 +423,7 @@ export default function Home() {
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => setSelectedCase(null)}
           ></div>
-          <div className="relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto border border-white/10 shadow-2xl">
+          <div className="relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-8 max-w-3xl w-full max-h-[85vh] overflow-y-auto border border-white/10 shadow-2xl">
             <button
               onClick={() => setSelectedCase(null)}
               className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
@@ -426,48 +433,97 @@ export default function Home() {
               </svg>
             </button>
 
-            <div className="pr-8">
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <h2 className="text-3xl font-bold text-white mb-2">
-                    {selectedCase.project_name}
-                  </h2>
-                  <div className="flex gap-2">
-                    <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-sm rounded-full">
-                      {selectedCase.industry}
+            <div className="pr-4">
+              {/* Header */}
+              <div className="mb-6">
+                <h2 className="text-3xl font-bold text-white mb-3">
+                  {selectedCase.project_name}
+                </h2>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-sm rounded-full">
+                    {selectedCase.industry}
+                  </span>
+                  <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-sm rounded-full">
+                    {selectedCase.use_case}
+                  </span>
+                  {selectedCase.business_function && (
+                    <span className="px-3 py-1 bg-green-500/20 text-green-300 text-sm rounded-full">
+                      {selectedCase.business_function}
                     </span>
-                    <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-sm rounded-full">
-                      {selectedCase.use_case}
+                  )}
+                </div>
+              </div>
+
+              {/* 销售信息区域 */}
+              <div className="space-y-4 mb-6">
+                {/* 痛点 */}
+                {(selectedCase.pain_point || selectedCase.raw_data?.description) && (
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+                    <h3 className="text-lg font-semibold text-red-300 mb-2 flex items-center gap-2">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      解决的痛点
+                    </h3>
+                    <p className="text-gray-200">
+                      {selectedCase.pain_point || selectedCase.raw_data?.description}
+                    </p>
+                  </div>
+                )}
+
+                {/* 解决方案 */}
+                {selectedCase.solution_approach && (
+                  <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4">
+                    <h3 className="text-lg font-semibold text-green-300 mb-2 flex items-center gap-2">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                      </svg>
+                      解决方案
+                    </h3>
+                    <p className="text-gray-200">{selectedCase.solution_approach}</p>
+                  </div>
+                )}
+
+                {/* 目标企业 */}
+                {selectedCase.target_company && (
+                  <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
+                    <h3 className="text-lg font-semibold text-purple-300 mb-2 flex items-center gap-2">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                      目标客户
+                    </h3>
+                    <p className="text-gray-200">{selectedCase.target_company}</p>
+                  </div>
+                )}
+
+                {/* 竞争优势 */}
+                {selectedCase.competitive_advantage && (
+                  <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4">
+                    <h3 className="text-lg font-semibold text-yellow-300 mb-2 flex items-center gap-2">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      竞争优势
+                    </h3>
+                    <p className="text-gray-200">{selectedCase.competitive_advantage}</p>
+                  </div>
+                )}
+
+                {/* 实施复杂度 */}
+                {selectedCase.implementation_complexity && (
+                  <div className="flex items-center gap-4">
+                    <span className="text-gray-400">实施复杂度:</span>
+                    <span className={`px-3 py-1 rounded-full text-sm ${
+                      selectedCase.implementation_complexity === '低' ? 'bg-green-500/20 text-green-300' :
+                      selectedCase.implementation_complexity === '中' ? 'bg-yellow-500/20 text-yellow-300' :
+                      'bg-red-500/20 text-red-300'
+                    }`}>
+                      {selectedCase.implementation_complexity}
                     </span>
                   </div>
-                </div>
+                )}
               </div>
-
-              {/* Quality Score */}
-              <div className="mb-6">
-                <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="text-gray-400">质量评分</span>
-                  <span className="text-white font-medium">
-                    {Math.round(selectedCase.quality_score * 100)}%
-                  </span>
-                </div>
-                <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-green-400 to-blue-500"
-                    style={{ width: `${selectedCase.quality_score * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              {/* Description from raw_data */}
-              {selectedCase.raw_data?.description && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-2">项目描述</h3>
-                  <p className="text-gray-300 leading-relaxed">
-                    {selectedCase.raw_data.description}
-                  </p>
-                </div>
-              )}
 
               {/* Technology */}
               <div className="mb-6">
@@ -485,28 +541,32 @@ export default function Home() {
               </div>
 
               {/* Stats */}
-              {selectedCase.raw_data && (
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div className="bg-white/5 rounded-xl p-4 text-center">
-                    <div className="text-2xl font-bold text-white">
-                      {selectedCase.raw_data.stars?.toLocaleString() || '-'}
-                    </div>
-                    <div className="text-gray-400 text-sm">Stars</div>
+              <div className="grid grid-cols-4 gap-4 mb-6">
+                <div className="bg-white/5 rounded-xl p-3 text-center">
+                  <div className="text-xl font-bold text-white">
+                    {selectedCase.raw_data?.stars?.toLocaleString() || '-'}
                   </div>
-                  <div className="bg-white/5 rounded-xl p-4 text-center">
-                    <div className="text-2xl font-bold text-white">
-                      {selectedCase.raw_data.forks?.toLocaleString() || '-'}
-                    </div>
-                    <div className="text-gray-400 text-sm">Forks</div>
-                  </div>
-                  <div className="bg-white/5 rounded-xl p-4 text-center">
-                    <div className="text-2xl font-bold text-white">
-                      {selectedCase.raw_data.language || '-'}
-                    </div>
-                    <div className="text-gray-400 text-sm">Language</div>
-                  </div>
+                  <div className="text-gray-400 text-xs">Stars</div>
                 </div>
-              )}
+                <div className="bg-white/5 rounded-xl p-3 text-center">
+                  <div className="text-xl font-bold text-white">
+                    {selectedCase.raw_data?.forks?.toLocaleString() || '-'}
+                  </div>
+                  <div className="text-gray-400 text-xs">Forks</div>
+                </div>
+                <div className="bg-white/5 rounded-xl p-3 text-center">
+                  <div className="text-xl font-bold text-white">
+                    {selectedCase.raw_data?.language || '-'}
+                  </div>
+                  <div className="text-gray-400 text-xs">Language</div>
+                </div>
+                <div className="bg-white/5 rounded-xl p-3 text-center">
+                  <div className="text-xl font-bold text-white">
+                    {Math.round(selectedCase.quality_score * 100)}%
+                  </div>
+                  <div className="text-gray-400 text-xs">质量</div>
+                </div>
+              </div>
 
               {/* Source Link */}
               {selectedCase.source_url && (

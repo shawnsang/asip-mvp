@@ -105,10 +105,12 @@ async function getRepositoryTopics(owner, repo) {
 }
 
 /**
- * 主采集函数
+ * 主采集函数 - 增强版
+ * 获取项目基本信息 + README 内容
  */
 async function collectGitHubData() {
   console.log('🚀 开始采集 GitHub 数据...');
+  console.log('📝 将获取每个项目的 README 内容...\n');
 
   const allProjects = [];
   const seenUrls = new Set();
@@ -116,8 +118,8 @@ async function collectGitHubData() {
   for (const query of SEARCH_QUERIES) {
     console.log(`\n📊 搜索: "${query}"`);
 
-    // 获取前 3 页结果
-    for (let page = 1; page <= 3; page++) {
+    // 获取前 2 页结果 (减少以获取 README)
+    for (let page = 1; page <= 2; page++) {
       console.log(`  - Page ${page}...`);
 
       const repos = await searchRepositories(query, page);
@@ -148,17 +150,32 @@ async function collectGitHubData() {
           created_at: repo.created_at,
           updated_at: repo.updated_at,
           license: repo.license?.name,
+          readme_content: null,  // README 内容
         };
 
-        allProjects.push(project);
-      }
+        // 获取 README 内容
+        const [owner, repoName] = repo.full_name.split('/');
+        try {
+          const readme = await getRepositoryReadme(owner, repoName);
+          project.readme_content = readme ? readme.substring(0, 8000) : null; // 限制长度
+          console.log(`    ✓ ${repo.name} - README: ${readme ? 'OK' : 'N/A'}`);
+        } catch (e) {
+          console.log(`    ✗ ${repo.name} - README 获取失败`);
+        }
 
-      // 遵守 GitHub API 速率限制
-      await new Promise(resolve => setTimeout(resolve, 1000));
+        allProjects.push(project);
+
+        // 遵守 GitHub API 速率限制
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
     }
   }
 
   console.log(`\n✅ 共采集 ${allProjects.length} 个项目`);
+
+  // 统计 README 获取情况
+  const withReadme = allProjects.filter(p => p.readme_content).length;
+  console.log(`📝 其中 ${withReadme} 个项目获取了 README`);
 
   // 保存到文件供后续处理
   const fs = require('fs');
