@@ -59,10 +59,11 @@ ${content}
 {
   "pain_point": "解决的1-2个核心痛点（中文，30字内）",
   "solution_approach": "解决方案核心思路（中文，50字内）",
-  "business_function": "业务功能领域",
-  "target_company": "目标企业类型",
-  "implementation_complexity": "低/中/高",
-  "competitive_advantage": "竞争优势（中文，40字内）"
+  "business_function": "业务功能领域，如：智能客服、流程自动化、数据分析、知识库、AI助手等",
+  "target_company": "目标企业类型，如：中小企业、大型企业的研发团队、互联网公司等",
+  "implementation_complexity": "实施复杂度：low/medium/high",
+  "competitive_advantage": "竞争优势（中文，40字内）",
+  "use_case_summary": "典型用例场景描述（中文，50字内）"
 }
 
 JSON输出：`;
@@ -85,16 +86,22 @@ JSON输出：`;
  */
 async function main() {
   const { createClient } = require('@supabase/supabase-js');
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('Supabase 环境变量未配置');
+    process.exit(1);
+  }
+  const supabase = createClient(supabaseUrl, supabaseKey);
 
   console.log('🔄 开始批量 LLM 结构化抽取...\n');
 
-  // 获取需要处理的项目（没有 pain_point 的）
+  // 获取需要处理的项目（缺少关键字段的）
   const { data: cases, error } = await supabase
     .from('cases')
     .select('id, project_name, outcome, technology')
-    .or('pain_point.is.null,pain_point.eq.')
-    .limit(20);
+    .or('pain_point.is.null,pain_point.eq.,solution_approach.is.null,solution_approach.eq.')
+    .limit(50);
 
   if (error) {
     console.error('获取数据失败:', error.message);
@@ -117,16 +124,21 @@ async function main() {
       );
 
       if (result) {
-        // 更新数据库
+        // 更新数据库 - 写入所有提取的字段
         await supabase
           .from('cases')
           .update({
             pain_point: result.pain_point,
-            outcome: result.solution_approach,
+            solution_approach: result.solution_approach,
+            business_function: result.business_function,
+            target_company: result.target_company,
+            implementation_complexity: result.implementation_complexity,
+            competitive_advantage: result.competitive_advantage,
+            use_case_summary: result.use_case_summary,
           })
           .eq('id', c.id);
 
-        console.log(`    ✓ 已更新: 痛点=${result.pain_point?.substring(0, 20)}...`);
+        console.log(`    ✓ 已更新: ${result.business_function} | ${result.implementation_complexity}`);
       }
 
       // 避免 API 限流

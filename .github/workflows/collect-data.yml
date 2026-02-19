@@ -18,6 +18,9 @@ jobs:
   collect:
     runs-on: ubuntu-latest
     environment: Production – asip-mvp
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -76,9 +79,6 @@ jobs:
 
       - name: Import to database
         run: node scripts/import-merged.js
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
       - name: Run LLM extraction
         run: node scripts/extract-db.js
