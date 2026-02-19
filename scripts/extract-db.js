@@ -96,12 +96,11 @@ async function main() {
 
   console.log('🔄 开始批量 LLM 结构化抽取...\n');
 
-  // 获取需要处理的项目（缺少关键字段的）
+  // 获取需要处理的项目（缺少关键字段的）- 全部处理
   const { data: cases, error } = await supabase
     .from('cases')
     .select('id, project_name, outcome, technology')
-    .or('pain_point.is.null,pain_point.eq.,solution_approach.is.null,solution_approach.eq.')
-    .limit(50);
+    .or('pain_point.is.null,pain_point.eq.,solution_approach.is.null,solution_approach.eq.');
 
   if (error) {
     console.error('获取数据失败:', error.message);
