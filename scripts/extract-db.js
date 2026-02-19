@@ -91,6 +91,10 @@ JSON输出：`;
 
   const result = await callQwen(prompt);
 
+  if (!result) {
+    return null;
+  }
+
   try {
     const jsonMatch = result.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
@@ -129,11 +133,12 @@ async function main() {
 
   console.log('🔄 开始 LLM 结构化抽取...\n');
 
-  // 获取需要处理的项目 - 缺少关键字段的
+  // 获取需要处理的项目 - 缺少 pain_point 的
   const { data: cases, error } = await supabase
     .from('cases')
     .select('id, project_name, outcome, technology, source_url, raw_data')
-    .or('pain_point.is.null,pain_point.eq.,solution_approach.is.null,solution_approach.eq.');
+    .is('pain_point', null)
+    .limit(100);
 
   if (error) {
     console.error('❌ 获取数据失败:', error.message);
