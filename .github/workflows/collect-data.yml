@@ -30,6 +30,45 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # ========== 前置验证步骤 ==========
+      - name: Verify Supabase connection
+        run: |
+          echo "🔍 验证 Supabase 连接..."
+          node -e "
+            const { createClient } = require('@supabase/supabase-js');
+            const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+            supabase.from('cases').select('id').limit(1).then(({ data, error }) => {
+              if (error) {
+                console.error('❌ Supabase 连接失败:', error.message);
+                process.exit(1);
+              }
+              console.log('✅ Supabase 连接成功');
+            });
+          "
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: Verify LLM API
+        run: |
+          echo "🔍 验证 DashScope LLM API..."
+          node -e "
+            const axios = require('axios');
+            axios.post(
+              'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
+              { model: 'qwen-plus', input: { prompt: 'hi' }, parameters: { result_format: 'message' } },
+              { headers: { 'Authorization': 'Bearer ' + process.env.DASHSCOPE_API_KEY, 'Content-Type': 'application/json' } }
+            ).then(() => {
+              console.log('✅ LLM API 连接成功');
+            }).catch(err => {
+              console.error('❌ LLM API 失败:', err.response?.data?.message || err.message);
+              process.exit(1);
+            });
+          "
+        env:
+          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+      # ========== 验证结束 ==========
+
       - name: Collect GitHub data
         run: node scripts/collect-all.js github
         env:
