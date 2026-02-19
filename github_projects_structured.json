@@ -21,12 +21,12 @@
     "updated_at": "2026-02-18T07:55:45Z",
     "license": "MIT License",
     "pain_point": "AI应用开发门槛高，流程编排复杂",
-    "solution_approach": "提供可视化拖拽界面，低代码构建和部署多智能体工作流",
+    "solution_approach": "提供可视化拖拽界面，低代码构建和部署AI智能体与多步工作流",
     "business_function": "流程自动化、智能客服、内容生成",
-    "target_company": "中小企业及大型企业的AI创新部门",
-    "implementation_complexity": "中",
-    "competitive_advantage": "开源免费、React Flow可视化编排、原生支持多Agent协同",
-    "use_case_summary": "销售团队通过拖拽组件快速搭建客户咨询自动应答+工单分派的AI工作流，无需编码即可上线"
+    "target_company": "中小企业及大型企业的AI创新团队或数字化部门",
+    "implementation_complexity": "低",
+    "competitive_advantage": "开源免费、React Flow可视化编排、原生支持多智能体协作",
+    "use_case_summary": "业务人员通过拖拽组件快速搭建客服问答机器人、数据处理流水线或营销文案生成工作流并一键部署"
   },
   {
     "source": "GitHub",
@@ -63,13 +63,13 @@
     "created_at": "2023-04-12T07:40:24Z",
     "updated_at": "2026-02-18T07:53:01Z",
     "license": "Other",
-    "pain_point": "AI应用开发门槛高、工作流编排复杂",
-    "solution_approach": "提供低代码/无代码的生产级智能体工作流开发平台，支持多模型与RAG集成",
+    "pain_point": "AI工作流开发门槛高、部署运维复杂",
+    "solution_approach": "提供生产就绪的低代码/无代码agentic工作流开发平台，支持多模型集成与RAG增强",
     "business_function": "流程自动化、智能客服、内容生成",
-    "target_company": "中小企业及大型企业的AI创新部门、数字化转型团队",
+    "target_company": "中小企业及大型企业的AI创新团队或数字化部门",
     "implementation_complexity": "中",
-    "competitive_advantage": "生产就绪、支持主流LLM与MCP协议、开箱即用的Orchestration能力",
-    "use_case_summary": "企业可快速构建基于大模型的自动化客服、内部知识助手或业务审批工作流，无需深度AI工程能力"
+    "competitive_advantage": "开源可私有化部署；原生支持多LLM与MCP协议；开箱即用的Orchestration能力",
+    "use_case_summary": "企业快速构建并上线基于大模型的自动化业务流程，如智能工单处理、多步骤客户咨询应答、动态知识库驱动的销售话术生成"
   },
   {
     "source": "GitHub",
@@ -105,13 +105,13 @@
     "created_at": "2022-10-17T02:58:36Z",
     "updated_at": "2026-02-18T07:45:21Z",
     "license": "MIT License",
-    "pain_point": "AI应用开发碎片化、多模型集成难",
-    "solution_approach": "提供统一框架，标准化LLM调用、工具编排与多智能体协作流程",
+    "pain_point": "AI应用开发碎片化、Agent系统可靠性差",
+    "solution_approach": "提供统一框架与工具链，标准化构建、编排和监控可信赖的AI Agent系统",
     "business_function": "智能客服、流程自动化、内容生成",
-    "target_company": "中大型企业的AI工程部或数字化转型团队",
+    "target_company": "大型企业的AI工程部或数字化创新中心",
     "implementation_complexity": "中",
-    "competitive_advantage": "开源活跃、多模型原生支持、LangGraph强化可观察性与状态管理",
-    "use_case_summary": "企业快速构建可调试、可扩展的AI代理应用，如自动化工单处理、动态知识问答与跨系统任务协同"
+    "competitive_advantage": "开源生态成熟、多模型/多工具深度集成、LangGraph支持复杂工作流编排",
+    "use_case_summary": "企业快速构建具备记忆、工具调用和多步骤推理能力的生产级AI助手，用于客户服务自动化或内部知识问答"
   },
   {
     "source": "GitHub",
@@ -148,13 +148,13 @@
     "created_at": "2025-03-05T16:38:29Z",
     "updated_at": "2026-02-18T07:26:56Z",
     "license": "GNU General Public License v3.0",
-    "pain_point": "AI开发工具提示词不统一、模型适配难",
-    "solution_approach": "聚合主流AI编程工具的系统提示词与内部模型配置，开源共享",
-    "business_function": "内容生成、开发提效",
-    "target_company": "中小型AI原生开发团队、技术型产品部门",
+    "pain_point": "AI开发工具提示词与模型配置分散难管理",
+    "solution_approach": "聚合开源AI编程工具的系统提示词、内部工具及模型配置，提供统一参考库",
+    "business_function": "开发者体验优化、AI工程化支持",
+    "target_company": "技术驱动型中小企业、AI研发团队",
     "implementation_complexity": "低",
-    "competitive_advantage": "覆盖超25个热门AI编码工具，全开源可即插即用",
-    "use_case_summary": "开发者快速获取并复用Claude、Cursor、Devin等工具的优化系统提示词，提升AI编程准确率与一致性"
+    "competitive_advantage": "覆盖主流AI编程工具；全开源可即用；持续更新提示词与模型实践",
+    "use_case_summary": "开发者快速获取Cursor、Replit、Devin AI等工具的优质系统提示词和模型配置，提升AI编码效率与一致性"
   },
   {
     "source": "GitHub",
@@ -176,11 +176,11 @@
     "updated_at": "2026-02-18T07:56:05Z",
     "license": "Apache License 2.0",
     "pain_point": "LLM应用开发碎片化、技术选型难",
-    "solution_approach": "聚合开源LLM应用案例，覆盖AI Agent与RAG架构，支持多模型平台",
-    "business_function": "智能客服、流程自动化、内容生成",
-    "target_company": "中小企业AI落地团队、开发者中心",
+    "solution_approach": "聚合主流LLM、AI Agent与RAG实战项目，提供开箱即用的技术参考和代码模板",
+    "business_function": "AI应用开发、智能客服、内容生成",
+    "target_company": "AI技术团队、中小企业研发部门",
     "implementation_complexity": "中",
-    "competitive_advantage": "跨厂商模型兼容性好；开箱即用的Agent+RAG实践模板",
-    "use_case_summary": "开发者快速复用高质量LLM应用模板，构建具备记忆与工具调用能力的AI助手，降低Agent开发门槛"
+    "competitive_advantage": "多模型支持（OpenAI/Anthropic/Gemini/开源）、聚焦Agent+RAG生产级实践",
+    "use_case_summary": "开发者快速构建基于AI Agent和RAG的智能应用，如文档问答助手、自动化客服机器人或知识库增强型内容生成工具"
   }
 ]
