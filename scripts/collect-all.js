@@ -36,6 +36,28 @@ async function fetchWithRateLimit(url, options = {}, delay = 1000) {
 }
 
 /**
+ * 获取 GitHub 仓库的 README 内容
+ */
+async function getRepositoryReadme(owner, repo) {
+  const url = `https://api.github.com/repos/${owner}/${repo}/readme`;
+
+  try {
+    const response = await fetchWithRateLimit(url, {
+      headers: {
+        'Accept': 'application/vnd.github.raw+json',
+      },
+    }, 500); // 更快但仍有限制
+
+    if (!response.ok) return null;
+
+    const content = await response.text();
+    return content;
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
  * GitHub 数据抓取器 (无 Token 版)
  */
 async function collectGitHub() {
@@ -67,7 +89,8 @@ async function collectGitHub() {
           if (seenUrls.has(repo.html_url)) continue;
           seenUrls.add(repo.html_url);
 
-          results.push({
+          // 基本信息
+          const projectData = {
             source: 'GitHub',
             source_type: 'repository',
             source_url: repo.html_url,
@@ -83,7 +106,26 @@ async function collectGitHub() {
             updated_at: repo.updated_at,
             license: repo.license?.name,
             collected_at: new Date().toISOString(),
-          });
+          };
+
+          // 获取 README (限制前 80 个项目以避免超时)
+          if (results.length < 80) {
+            const [owner, repoName] = repo.full_name.split('/');
+            if (owner && repoName) {
+              try {
+                const readme = await getRepositoryReadme(owner, repoName);
+                projectData.readme_content = readme ? readme.substring(0, 15000) : null;
+                console.log(`    ✓ ${repo.name}: ${readme ? 'README OK' : '无'}`);
+              } catch (e) {
+                projectData.readme_content = null;
+              }
+              await new Promise(r => setTimeout(r, 600));
+            }
+          } else {
+            projectData.readme_content = null;
+          }
+
+          results.push(projectData);
         }
 
         console.log(`  ✓ Page ${page}: ${repos.length} repos`);

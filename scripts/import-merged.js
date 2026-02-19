@@ -198,6 +198,7 @@ async function importData(dataFile) {
       description: item.description,
       topics: item.topics,
       author: item.author,
+      readme_content: item.readme_content || null,
     },
   }));
 
