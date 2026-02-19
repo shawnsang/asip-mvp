@@ -35,9 +35,12 @@ export async function GET(request: Request) {
       });
     }
 
+    // 获取总记录数
+    const total = await caseDb.getCaseCount();
+
     return NextResponse.json({
       data,
-      total: data.length,
+      total: total || data.length,
     });
   } catch (error: any) {
     console.error('API Error:', error);

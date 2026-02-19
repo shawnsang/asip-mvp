@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface Case {
   id: string;
@@ -13,6 +13,12 @@ interface Case {
   source: string;
   source_url: string;
   quality_score: number;
+  raw_data?: any;
+}
+
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
 }
 
 export default function Home() {
@@ -20,16 +26,44 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIndustry, setSelectedIndustry] = useState('');
+  const [selectedCase, setSelectedCase] = useState<Case | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
+
+  // Chat state
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    { role: 'assistant', content: '您好！我是 ASIP AI Copilot，您的AI Agent智能助手。我可以帮您搜索案例、生成销售话术、估算ROI。请问有什么可以帮您？' }
+  ]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // ROI Calculator state
+  const [isROIOpen, setIsROIOpen] = useState(false);
+  const [roiIndustry, setRoiIndustry] = useState('通用');
+  const [roiUseCase, setRoiUseCase] = useState('流程自动化');
+  const [companySize, setCompanySize] = useState('中型企业');
+  const [roiResult, setRoiResult] = useState<any>(null);
+  const [isCalculating, setIsCalculating] = useState(false);
+
+  // Filter state
+  const [selectedUseCase, setSelectedUseCase] = useState('');
+  const [sortBy, setSortBy] = useState('quality');
 
   useEffect(() => {
     fetchCases();
   }, []);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   async function fetchCases() {
     try {
       const res = await fetch('/api/cases?limit=50');
       const data = await res.json();
       setCases(data.data || []);
+      setTotalCount(data.total || 0);
     } catch (error) {
       console.error('Failed to fetch cases:', error);
     } finally {
@@ -37,19 +71,85 @@ export default function Home() {
     }
   }
 
+  async function sendMessage() {
+    if (!inputMessage.trim() || isLoading) return;
+
+    const userMessage = inputMessage.trim();
+    setInputMessage('');
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setIsLoading(true);
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMessage }),
+      });
+      const data = await res.json();
+      setMessages(prev => [...prev, { role: 'assistant', content: data.data }]);
+    } catch (error) {
+      setMessages(prev => [...prev, { role: 'assistant', content: '抱歉，请稍后再试。' }]);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function handleKeyPress(e: React.KeyboardEvent) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  async function calculateROI() {
+    setIsCalculating(true);
+    setRoiResult(null);
+    try {
+      const res = await fetch('/api/roi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          industry: roiIndustry,
+          useCase: roiUseCase,
+          companySize: companySize,
+        }),
+      });
+      const data = await res.json();
+      setRoiResult(data.data);
+    } catch (error) {
+      console.error('ROI calculation error:', error);
+    } finally {
+      setIsCalculating(false);
+    }
+  }
+
   const filteredCases = cases.filter((c: Case) => {
     const matchesSearch = !searchTerm ||
       c.project_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.use_case.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.industry.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.technology.some((t: string) => t.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesIndustry = !selectedIndustry || c.industry === selectedIndustry;
+    const matchesUseCase = !selectedUseCase || c.use_case === selectedUseCase;
 
-    return matchesSearch && matchesIndustry;
+    return matchesSearch && matchesIndustry && matchesUseCase;
+  }).sort((a, b) => {
+    if (sortBy === 'quality') {
+      return b.quality_score - a.quality_score;
+    } else if (sortBy === 'name') {
+      return a.project_name.localeCompare(b.project_name);
+    } else {
+      return 0;
+    }
   });
 
   const industries = Array.from(
     new Set(cases.map((c: Case) => c.industry))
+  );
+
+  const useCases = Array.from(
+    new Set(cases.map((c: Case) => c.use_case))
   );
 
   return (
@@ -87,7 +187,7 @@ export default function Home() {
             </div>
 
             {/* Industry Filter */}
-            <div className="flex flex-wrap justify-center gap-2 mb-4">
+            <div className="flex flex-wrap justify-center gap-2 mb-3">
               <button
                 onClick={() => setSelectedIndustry('')}
                 className={`px-4 py-2 rounded-full text-sm ${
@@ -112,6 +212,33 @@ export default function Home() {
                 </button>
               ))}
             </div>
+
+            {/* Use Case Filter */}
+            <div className="flex flex-wrap justify-center gap-2 mb-3">
+              <button
+                onClick={() => setSelectedUseCase('')}
+                className={`px-3 py-1.5 rounded-full text-xs ${
+                  selectedUseCase === ''
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                }`}
+              >
+                All Use Cases
+              </button>
+              {useCases.map((uc: any) => (
+                <button
+                  key={uc}
+                  onClick={() => setSelectedUseCase(uc)}
+                  className={`px-3 py-1.5 rounded-full text-xs ${
+                    selectedUseCase === uc
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                  }`}
+                >
+                  {uc}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -122,6 +249,14 @@ export default function Home() {
           <h2 className="text-3xl font-bold text-white">
             {filteredCases.length} Success Cases Found
           </h2>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="px-4 py-2 bg-white/10 rounded-xl border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+          >
+            <option value="quality" className="bg-gray-800">按质量评分</option>
+            <option value="name" className="bg-gray-800">按名称排序</option>
+          </select>
         </div>
 
         {loading ? (
@@ -134,6 +269,7 @@ export default function Home() {
             {filteredCases.map((caseItem: Case) => (
               <div
                 key={caseItem.id}
+                onClick={() => setSelectedCase(caseItem)}
                 className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10 hover:border-purple-500/50 transition-all group cursor-pointer"
               >
                 <div className="flex items-start justify-between mb-4">
@@ -215,8 +351,11 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="bg-white/5 backdrop-blur-md rounded-2xl p-8 border border-white/10">
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mb-4">
+          <div
+            onClick={() => setIsChatOpen(true)}
+            className="bg-white/5 backdrop-blur-md rounded-2xl p-8 border border-white/10 hover:border-blue-500/50 transition-all cursor-pointer group"
+          >
+            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
               </svg>
@@ -227,8 +366,11 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="bg-white/5 backdrop-blur-md rounded-2xl p-8 border border-white/10">
-            <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4">
+          <div
+            onClick={() => setIsROIOpen(true)}
+            className="bg-white/5 backdrop-blur-md rounded-2xl p-8 border border-white/10 hover:border-green-500/50 transition-all cursor-pointer group"
+          >
+            <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
@@ -246,7 +388,7 @@ export default function Home() {
         <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 rounded-3xl p-12 border border-white/10">
           <div className="grid md:grid-cols-4 gap-8 text-center">
             <div>
-              <div className="text-4xl font-bold text-white mb-2">{cases.length}+</div>
+              <div className="text-4xl font-bold text-white mb-2">{totalCount}</div>
               <div className="text-gray-400">Success Cases</div>
             </div>
             <div>
@@ -254,7 +396,9 @@ export default function Home() {
               <div className="text-gray-400">Industries</div>
             </div>
             <div>
-              <div className="text-4xl font-bold text-white mb-2">50+</div>
+              <div className="text-4xl font-bold text-white mb-2">
+                {new Set(cases.map((c: Case) => c.use_case)).size}
+              </div>
               <div className="text-gray-400">Use Cases</div>
             </div>
             <div>
@@ -264,6 +408,329 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Case Detail Modal */}
+      {selectedCase && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setSelectedCase(null)}
+          ></div>
+          <div className="relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto border border-white/10 shadow-2xl">
+            <button
+              onClick={() => setSelectedCase(null)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <div className="pr-8">
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <h2 className="text-3xl font-bold text-white mb-2">
+                    {selectedCase.project_name}
+                  </h2>
+                  <div className="flex gap-2">
+                    <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-sm rounded-full">
+                      {selectedCase.industry}
+                    </span>
+                    <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-sm rounded-full">
+                      {selectedCase.use_case}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quality Score */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between text-sm mb-2">
+                  <span className="text-gray-400">质量评分</span>
+                  <span className="text-white font-medium">
+                    {Math.round(selectedCase.quality_score * 100)}%
+                  </span>
+                </div>
+                <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-green-400 to-blue-500"
+                    style={{ width: `${selectedCase.quality_score * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+
+              {/* Description from raw_data */}
+              {selectedCase.raw_data?.description && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-white mb-2">项目描述</h3>
+                  <p className="text-gray-300 leading-relaxed">
+                    {selectedCase.raw_data.description}
+                  </p>
+                </div>
+              )}
+
+              {/* Technology */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-white mb-3">技术栈</h3>
+                <div className="flex flex-wrap gap-2">
+                  {selectedCase.technology?.map((tech: string, i: number) => (
+                    <span
+                      key={i}
+                      className="px-3 py-1 bg-blue-500/20 text-blue-300 text-sm rounded-full"
+                    >
+                      {tech}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Stats */}
+              {selectedCase.raw_data && (
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="bg-white/5 rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold text-white">
+                      {selectedCase.raw_data.stars?.toLocaleString() || '-'}
+                    </div>
+                    <div className="text-gray-400 text-sm">Stars</div>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold text-white">
+                      {selectedCase.raw_data.forks?.toLocaleString() || '-'}
+                    </div>
+                    <div className="text-gray-400 text-sm">Forks</div>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold text-white">
+                      {selectedCase.raw_data.language || '-'}
+                    </div>
+                    <div className="text-gray-400 text-sm">Language</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Source Link */}
+              {selectedCase.source_url && (
+                <a
+                  href={selectedCase.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium rounded-xl hover:from-purple-500 hover:to-pink-500 transition-all"
+                >
+                  <span>查看源码</span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ROI Calculator Modal */}
+      {isROIOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setIsROIOpen(false)}
+          ></div>
+          <div className="relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-8 max-w-lg w-full border border-white/10 shadow-2xl">
+            <button
+              onClick={() => setIsROIOpen(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <h2 className="text-2xl font-bold text-white mb-6">ROI 计算器</h2>
+
+            <div className="space-y-4 mb-6">
+              {/* Industry */}
+              <div>
+                <label className="block text-gray-400 text-sm mb-2">行业</label>
+                <select
+                  value={roiIndustry}
+                  onChange={(e) => setRoiIndustry(e.target.value)}
+                  className="w-full px-4 py-2 bg-white/10 rounded-xl border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="通用" className="bg-gray-800">通用</option>
+                  <option value="金融" className="bg-gray-800">金融</option>
+                  <option value="医疗" className="bg-gray-800">医疗</option>
+                  <option value="教育" className="bg-gray-800">教育</option>
+                  <option value="零售" className="bg-gray-800">零售</option>
+                  <option value="制造" className="bg-gray-800">制造</option>
+                  <option value="物流" className="bg-gray-800">物流</option>
+                  <option value="地产" className="bg-gray-800">地产</option>
+                </select>
+              </div>
+
+              {/* Use Case */}
+              <div>
+                <label className="block text-gray-400 text-sm mb-2">用例场景</label>
+                <select
+                  value={roiUseCase}
+                  onChange={(e) => setRoiUseCase(e.target.value)}
+                  className="w-full px-4 py-2 bg-white/10 rounded-xl border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="智能客服" className="bg-gray-800">智能客服</option>
+                  <option value="流程自动化" className="bg-gray-800">流程自动化</option>
+                  <option value="数据分析" className="bg-gray-800">数据分析</option>
+                  <option value="AI 助手" className="bg-gray-800">AI 助手</option>
+                  <option value="内容生成" className="bg-gray-800">内容生成</option>
+                  <option value="知识库" className="bg-gray-800">知识库</option>
+                  <option value="搜索" className="bg-gray-800">搜索</option>
+                  <option value="其他" className="bg-gray-800">其他</option>
+                </select>
+              </div>
+
+              {/* Company Size */}
+              <div>
+                <label className="block text-gray-400 text-sm mb-2">企业规模</label>
+                <select
+                  value={companySize}
+                  onChange={(e) => setCompanySize(e.target.value)}
+                  className="w-full px-4 py-2 bg-white/10 rounded-xl border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="小型企业" className="bg-gray-800">小型企业 (50人以下)</option>
+                  <option value="中型企业" className="bg-gray-800">中型企业 (50-500人)</option>
+                  <option value="大型企业" className="bg-gray-800">大型企业 (500人以上)</option>
+                </select>
+              </div>
+            </div>
+
+            <button
+              onClick={calculateROI}
+              disabled={isCalculating}
+              className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium rounded-xl hover:from-green-600 hover:to-emerald-600 disabled:opacity-50 transition-all"
+            >
+              {isCalculating ? '计算中...' : '计算 ROI'}
+            </button>
+
+            {/* Results */}
+            {roiResult && (
+              <div className="mt-6 p-4 bg-white/5 rounded-xl border border-white/10">
+                <h3 className="text-lg font-semibold text-white mb-4">估算结果</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center p-3 bg-white/5 rounded-lg">
+                    <div className="text-2xl font-bold text-green-400">{roiResult.labor_savings}</div>
+                    <div className="text-gray-400 text-sm">节省人力 (人/年)</div>
+                  </div>
+                  <div className="text-center p-3 bg-white/5 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-400">¥{roiResult.annual_savings?.toLocaleString()}</div>
+                    <div className="text-gray-400 text-sm">年节省成本</div>
+                  </div>
+                  <div className="text-center p-3 bg-white/5 rounded-lg">
+                    <div className="text-2xl font-bold text-purple-400">{roiResult.payback_period}</div>
+                    <div className="text-gray-400 text-sm">投资回报期 (月)</div>
+                  </div>
+                  <div className="text-center p-3 bg-white/5 rounded-lg">
+                    <div className={`text-2xl font-bold ${
+                      roiResult.confidence === '高' ? 'text-green-400' :
+                      roiResult.confidence === '中' ? 'text-yellow-400' : 'text-red-400'
+                    }`}>{roiResult.confidence}</div>
+                    <div className="text-gray-400 text-sm">置信度</div>
+                  </div>
+                </div>
+                {roiResult.note && (
+                  <p className="text-gray-500 text-xs mt-3 text-center">{roiResult.note}</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Floating Chat Button */}
+      {!isChatOpen && (
+        <button
+          onClick={() => setIsChatOpen(true)}
+          className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform z-50"
+        >
+          <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+          </svg>
+        </button>
+      )}
+
+      {/* Chat Panel */}
+      {isChatOpen && (
+        <div className="fixed bottom-6 right-6 w-96 h-[500px] bg-gray-900 rounded-2xl shadow-2xl border border-white/10 flex flex-col z-50">
+          {/* Chat Header */}
+          <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-white font-semibold">AI Copilot</h3>
+                <p className="text-gray-400 text-xs">在线</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsChatOpen(false)}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Chat Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {messages.map((msg, i) => (
+              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                  msg.role === 'user'
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                    : 'bg-white/10 text-gray-100'
+                }`}>
+                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                </div>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-white/10 rounded-2xl px-4 py-2">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* Chat Input */}
+          <div className="p-4 border-t border-white/10">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="输入消息..."
+                className="flex-1 px-4 py-2 bg-white/10 rounded-xl border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                onClick={sendMessage}
+                disabled={isLoading || !inputMessage.trim()}
+                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl hover:from-blue-600 hover:to-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
