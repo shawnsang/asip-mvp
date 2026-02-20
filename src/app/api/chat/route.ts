@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { generateSalesScript, extractCaseInfo } from '@/lib/llm';
+import { extractCaseInfo } from '@/lib/llm';
+import { runSalesScriptFlow } from '@/lib/agents';
+import { agentRAG, retrieveFromDatabase } from '@/lib/rag';
 
 /**
  * Chat API - AI Copilot 对话接口
@@ -17,9 +19,36 @@ export async function POST(request: Request) {
       );
     }
 
-    let result: string;
+    // 自动意图识别 - 如果没有指定 mode
+    let resolvedMode = mode || 'chat';
+    if (!mode && message) {
+      const lowerMessage = message.toLowerCase();
+      const brainstormKeywords = [
+        '新应用方向', '新机会', '新场景', '有什么新', '创新方向',
+        '脑力风暴', '灵感', '发现新', '探索新', '趋势方向',
+        '最近有什么新', '新型应用', '创新案例', 'ai agent 趋势',
+        'ai 有什么新', 'ai 新方向', 'agent 新应用',
+        'brainstorm', 'trends', 'new opportunity', 'new direction',
+        '发现机会', '探索方向', '创新'
+      ];
+      for (const keyword of brainstormKeywords) {
+        if (lowerMessage.includes(keyword.toLowerCase())) {
+          resolvedMode = 'brainstorm';
+          console.log('[AutoIntent] Matched keyword:', keyword);
+          break;
+        }
+      }
+    }
 
-    switch (mode) {
+    let result: any;
+    let metadata: Record<string, any> = { autoIntent: resolvedMode !== mode };
+
+    switch (resolvedMode) {
+      case 'brainstorm':
+        // 脑力风暴模式 - 发现新机会
+        result = await handleBrainstorm(message, customerIndustry);
+        break;
+
       case 'sales_script':
         // 生成销售话术
         if (!caseInfo || !customerIndustry) {
@@ -28,7 +57,17 @@ export async function POST(request: Request) {
             { status: 400 }
           );
         }
-        result = await generateSalesScript(caseInfo, customerIndustry);
+        const scriptResult = await runSalesScriptFlow({
+          caseInfo,
+          customer: {
+            industry: customerIndustry,
+            companySize: body.customerCompanySize,
+            role: body.customerRole
+          },
+          type: body.scriptType || 'cold_call'
+        });
+        result = scriptResult.data;
+        metadata = { mode: 'sales_script' };
         break;
 
       case 'extract_info':
@@ -53,6 +92,7 @@ export async function POST(request: Request) {
       success: true,
       data: result,
       mode: mode || 'chat',
+      metadata
     });
   } catch (error: any) {
     console.error('Chat API Error:', error);
@@ -60,6 +100,41 @@ export async function POST(request: Request) {
       { error: error.message || 'Internal server error' },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * 处理脑力风暴 - Agent RAG 模式
+ * 从数据库检索 + RAG 生成，速度快且可溯源
+ */
+async function handleBrainstorm(message: string, industry?: string): Promise<any> {
+  try {
+    // 使用 Agent RAG 模式：从数据库检索 + LLM 生成
+    const ragResult = await agentRAG(message, {
+      mode: 'brainstorm',
+      industry,
+      includeTypes: ['case', 'scenario', 'trend']
+    });
+
+    // 格式化返回结果
+    return {
+      type: 'brainstorm',
+      answer: ragResult.answer,
+      sources: ragResult.sources,
+      retrievedCount: ragResult.metadata.retrievedCount,
+      message: ragResult.metadata.retrievedCount > 0
+        ? `基于案例库中 ${ragResult.metadata.retrievedCount} 个相关案例生成回答`
+        : '案例库中暂无相关数据，使用通用知识回答',
+      // 保留原有流程作为备用
+      fallback: null
+    };
+  } catch (error: any) {
+    console.error('Brainstorm error:', error);
+    return {
+      type: 'brainstorm',
+      error: error.message,
+      message: '分析过程中出现错误，请稍后重试。'
+    };
   }
 }
 

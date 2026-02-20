@@ -93,12 +93,99 @@ export default function Home() {
         body: JSON.stringify({ message: userMessage }),
       });
       const data = await res.json();
-      setMessages(prev => [...prev, { role: 'assistant', content: data.data }]);
+
+      // 检查是否是脑力风暴结果
+      if (data.data?.type === 'brainstorm') {
+        // 格式化并显示脑力风暴结果
+        const result = formatBrainstormResult(data.data, userMessage);
+        setMessages(prev => [...prev, { role: 'assistant', content: result }]);
+      } else {
+        // 普通对话，直接显示结果
+        setMessages(prev => [...prev, { role: 'assistant', content: data.data }]);
+      }
     } catch (error) {
       setMessages(prev => [...prev, { role: 'assistant', content: '抱歉，请稍后再试。' }]);
     } finally {
       setIsLoading(false);
     }
+  }
+
+  // 格式化脑力风暴结果
+  function formatBrainstormResult(result: any, query: string): string {
+    if (!result) return '分析完成，但没有返回结果。';
+
+    const lines: string[] = [];
+
+    lines.push(`🧠 **脑力风暴分析完成**\n`);
+    lines.push(`针对您的问题："${query}"\n`);
+
+    // RAG 模式返回
+    if (result.answer) {
+      lines.push(`\n${result.answer}\n`);
+
+      // 来源信息
+      if (result.sources?.length > 0) {
+        lines.push(`\n## 📚 **参考来源**\n`);
+        result.sources.forEach((s: any, i: number) => {
+          lines.push(`${i + 1}. ${s.title}`);
+          if (s.url) lines.push(`   链接: ${s.url}`);
+          lines.push('');
+        });
+      }
+
+      // 提示信息
+      if (result.message) {
+        lines.push(`\n💡 ${result.message}`);
+      }
+
+      return lines.join('\n');
+    }
+
+    // 原有流程返回
+    lines.push(`\n`);
+
+    // 趋势发现
+    if (result.trends?.length > 0) {
+      lines.push(`## 📊 **最新趋势发现**\n`);
+      result.trends.forEach((t: any, i: number) => {
+        const name = t.name || t.title || `趋势${i + 1}`;
+        const desc = t.description || '';
+        lines.push(`${i + 1}. **${name}**`);
+        if (desc) lines.push(`   ${desc.slice(0, 80)}...`);
+        lines.push('');
+      });
+    }
+
+    // 场景建议
+    if (result.scenes?.length > 0) {
+      lines.push(`## 🎯 **可推荐场景**\n`);
+      result.scenes.slice(0, 3).forEach((s: any, i: number) => {
+        lines.push(`${i + 1}. ${s.name || s.industry + ' - ' + s.useCase}`);
+        if (s.painPoints?.length) {
+          lines.push(`   痛点：${s.painPoints[0]}`);
+        }
+        if (s.benefits?.length) {
+          lines.push(`   价值：${s.benefits[0]}`);
+        }
+        lines.push('');
+      });
+    }
+
+    // 销售话术
+    if (result.salesScript) {
+      lines.push(`## 📝 **销售话术**\n`);
+      lines.push(result.salesScript.slice(0, 600) + '\n');
+    }
+
+    // 建议行动
+    if (result.recommendations?.length > 0) {
+      lines.push(`## 💡 **建议行动**\n`);
+      result.recommendations.slice(0, 3).forEach((r: string, i: number) => {
+        lines.push(`${i + 1}. ${r}`);
+      });
+    }
+
+    return lines.join('\n');
   }
 
   function handleKeyPress(e: React.KeyboardEvent) {
