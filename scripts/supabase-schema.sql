@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS cases (
   pain_point TEXT,  -- 解决的痛点
   technology TEXT[],  -- 数组类型存储技术栈
   outcome TEXT,
-  source TEXT NOT NULL,  -- GitHub, Reddit, Blog 等
+  source TEXT NOT NULL,  -- GitHub, Reddit, Blog, ProductHunt 等
   source_url TEXT,
   raw_data JSONB,  -- 原始数据备份
   quality_score FLOAT DEFAULT 0,  -- 质量评分 0-1
@@ -23,6 +23,18 @@ CREATE TABLE IF NOT EXISTS cases (
   implementation_complexity TEXT,  -- 实施复杂度: low/medium/high
   competitive_advantage TEXT,  -- 竞争优势
   use_case_summary TEXT,  -- 用例摘要
+
+  -- 新增: 项目类型分类 (case/tool/skill)
+  project_type TEXT DEFAULT 'tool',
+
+  -- 新增: Skills 相关字段
+  skill_category TEXT,  -- 技能分类：Agent技能、Prompt模板、Chain工作流等
+  skill_description TEXT,  -- 技能描述
+  use_cases TEXT,  -- 适用场景
+  difficulty TEXT,  -- 上手难度
+  prerequisites TEXT,  -- 前置要求
+  installation_method TEXT,  -- 安装/使用方法
+  example_prompt TEXT,  -- 示例 prompt
 
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -76,6 +88,8 @@ CREATE INDEX IF NOT EXISTS idx_cases_use_case ON cases(use_case);
 CREATE INDEX IF NOT EXISTS idx_cases_technology ON cases USING GIN(technology);
 CREATE INDEX IF NOT EXISTS idx_cases_source ON cases(source);
 CREATE INDEX IF NOT EXISTS idx_cases_quality ON cases(quality_score DESC);
+CREATE INDEX IF NOT EXISTS idx_cases_project_type ON cases(project_type);
+CREATE INDEX IF NOT EXISTS idx_cases_skill_category ON cases(skill_category);
 
 CREATE INDEX IF NOT EXISTS idx_scenarios_industry ON scenarios(industry);
 CREATE INDEX IF NOT EXISTS idx_scenarios_category ON scenarios(category);
@@ -113,8 +127,15 @@ INSERT INTO scenarios (name, industry, category, description, complexity) VALUES
   ('风险评估', '金融业', '风控', 'AI驱动的风险评估', 'high')
 ON CONFLICT (name) DO NOTHING;
 
--- 创建一个向量相似度搜索的函数（简化版）
--- 注意：需要启用 pgvector 扩展
+-- 如果表已存在，添加新列 (运行以下 SQL 如果表已创建)
+-- ALTER TABLE cases ADD COLUMN IF NOT EXISTS project_type TEXT DEFAULT 'tool';
+-- ALTER TABLE cases ADD COLUMN IF NOT EXISTS skill_category TEXT;
+-- ALTER TABLE cases ADD COLUMN IF NOT EXISTS skill_description TEXT;
+-- ALTER TABLE cases ADD COLUMN IF NOT EXISTS use_cases TEXT;
+-- ALTER TABLE cases ADD COLUMN IF NOT EXISTS difficulty TEXT;
+-- ALTER TABLE cases ADD COLUMN IF NOT EXISTS prerequisites TEXT;
+-- ALTER TABLE cases ADD COLUMN IF NOT EXISTS installation_method TEXT;
+-- ALTER TABLE cases ADD COLUMN IF NOT EXISTS example_prompt TEXT;
 
 -- 显示所有表
 SELECT

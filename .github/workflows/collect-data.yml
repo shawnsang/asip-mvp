@@ -72,8 +72,9 @@ jobs:
           DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
       # ========== 验证结束 ==========
 
-      - name: Collect GitHub data
-        run: node scripts/collect-all.js github
+      # ========== 数据采集 (一次性采集所有数据源) ==========
+      - name: Collect all data sources
+        run: node scripts/collect-all.js
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

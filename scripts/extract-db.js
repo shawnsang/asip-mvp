@@ -54,6 +54,31 @@ async function callQwen(prompt) {
 }
 
 /**
+ * 判断项目类型：案例 vs Skills/Prompts vs 工具
+ */
+function classifyProjectType(projectName, description, topics, readmeContent) {
+  const text = `${projectName} ${description || ''} ${topics?.join(' ') || ''} ${readmeContent || ''}`.toLowerCase();
+
+  // Skills/Prompts 关键词
+  const skillKeywords = ['prompt', 'prompts', 'skill', 'skills', 'template', 'system prompt', 'few-shot', 'chain', 'agent prompt'];
+  // 案例关键词
+  const caseKeywords = ['case study', 'use case', 'example', 'demo', 'success', 'ROI', 'customer', 'implementation', '案例'];
+  // 工具/框架关键词
+  const toolKeywords = ['framework', 'library', 'tool', 'SDK', 'agent', 'platform', 'engine'];
+
+  const skillScore = skillKeywords.filter(k => text.includes(k)).length;
+  const caseScore = caseKeywords.filter(k => text.includes(k)).length;
+  const toolScore = toolKeywords.filter(k => text.includes(k)).length;
+
+  if (skillScore >= 2) return 'skill';
+  if (caseScore >= 2) return 'case';
+  if (toolScore >= 2) return 'tool';
+
+  // 默认
+  return 'tool';
+}
+
+/**
  * 从项目信息中提取销售相关的结构化数据
  */
 async function extractCaseStructuredData(projectName, description, readmeContent, topics) {
@@ -70,7 +95,34 @@ README 内容:
 ${readme || '（无 README）'}
 `.trim();
 
-  const prompt = `你是一个AI Agent案例分析专家，专门为销售团队提取有价值的结构化信息。
+  const projectType = classifyProjectType(projectName, desc, topics, readme);
+
+  let prompt;
+
+  if (projectType === 'skill') {
+    // Skills/Prompts 项目 - 提取技能信息
+    prompt = `你是一个AI技能分析师，专门分析 GitHub 上的 Prompts 和 Skills 仓库。
+
+请从以下项目信息中提取 Skills 相关的结构化数据：
+
+${content}
+
+请严格按照以下JSON格式输出，不要添加任何其他内容：
+{
+  "project_type": "skill",
+  "skill_category": "技能分类，如：Agent技能、Prompt模板、Chain工作流、System Prompt等",
+  "skill_description": "该技能的描述（中文，50字以内）",
+  "use_cases": "主要适用场景（中文，60字以内）",
+  "difficulty": "上手难度：低/中/高",
+  "prerequisites": "前置要求，如：需要什么API Key、依赖什么模型等",
+  "installation_method": "安装/使用方式简述（中文，40字以内）",
+  "example_prompt": "如果包含示例prompt，提取出来"
+}
+
+JSON输出：`;
+  } else {
+    // 案例/工具项目 - 提取销售相关信息
+    prompt = `你是一个AI Agent案例分析专家，专门为销售团队提取有价值的结构化信息。
 
 请从以下GitHub项目信息中提取销售相关的结构化数据：
 
@@ -78,9 +130,10 @@ ${content}
 
 请严格按照以下JSON格式输出，不要添加任何其他内容：
 {
+  "project_type": "case" 或 "tool",
   "pain_point": "该项目解决的1-2个核心业务痛点（用中文，30字以内）",
   "solution_approach": "解决方案的核心思路（用中文，50字以内）",
-  "business_function": "主要适用的业务功能领域，如：智能客服、流程自动化、数据分析，内容生成、ERP集成等",
+  "business_function": "主要适用的业务功能领域，如：智能客服、流程自动化、数据分析、内容生成、ERP集成等",
   "target_company": "目标企业类型，如：中小企业、大型企业的XX部门等",
   "implementation_complexity": "实施复杂度：低/中/高",
   "competitive_advantage": "1-2个主要竞争优势（用中文，40字以内）",
@@ -88,6 +141,7 @@ ${content}
 }
 
 JSON输出：`;
+  }
 
   const result = await callQwen(prompt);
 
@@ -99,15 +153,34 @@ JSON输出：`;
     const jsonMatch = result.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
-      return {
-        pain_point: parsed.pain_point || null,
-        solution_approach: parsed.solution_approach || null,
-        business_function: parsed.business_function || null,
-        target_company: parsed.target_company || null,
-        implementation_complexity: parsed.implementation_complexity || null,
-        competitive_advantage: parsed.competitive_advantage || null,
-        use_case_summary: parsed.use_case_summary || null,
-      };
+
+      if (projectType === 'skill') {
+        return {
+          project_type: 'skill',
+          skill_category: parsed.skill_category || null,
+          skill_description: parsed.skill_description || null,
+          use_cases: parsed.use_cases || null,
+          difficulty: parsed.difficulty || null,
+          prerequisites: parsed.prerequisites || null,
+          installation_method: parsed.installation_method || null,
+          example_prompt: parsed.example_prompt || null,
+          // 兼容旧字段
+          business_function: parsed.skill_category,
+          use_case_summary: parsed.use_cases,
+          implementation_complexity: parsed.difficulty,
+        };
+      } else {
+        return {
+          project_type: parsed.project_type || 'tool',
+          pain_point: parsed.pain_point || null,
+          solution_approach: parsed.solution_approach || null,
+          business_function: parsed.business_function || null,
+          target_company: parsed.target_company || null,
+          implementation_complexity: parsed.implementation_complexity || null,
+          competitive_advantage: parsed.competitive_advantage || null,
+          use_case_summary: parsed.use_case_summary || null,
+        };
+      }
     }
   } catch (error) {
     console.error('    ⚠️ 解析失败:', error.message);
@@ -187,10 +260,19 @@ async function main() {
             implementation_complexity: result.implementation_complexity,
             competitive_advantage: result.competitive_advantage,
             use_case_summary: result.use_case_summary,
+            // 新增字段
+            project_type: result.project_type,
+            skill_category: result.skill_category,
+            skill_description: result.skill_description,
+            use_cases: result.use_cases,
+            difficulty: result.difficulty,
+            prerequisites: result.prerequisites,
+            installation_method: result.installation_method,
+            example_prompt: result.example_prompt,
           })
           .eq('id', c.id);
 
-        console.log(`    ✓ ${result.business_function || 'N/A'} | ${result.implementation_complexity || 'N/A'}`);
+        console.log(`    ✓ ${result.business_function || result.skill_category || 'N/A'} | ${result.implementation_complexity || result.difficulty || 'N/A'}`);
         success++;
       } else {
         console.log(`    ⊘ 无结果 (跳过)`);

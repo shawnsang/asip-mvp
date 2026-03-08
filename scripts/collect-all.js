@@ -313,9 +313,169 @@ async function collectReddit() {
 }
 
 /**
+ * Product Hunt 数据抓取器
+ */
+async function collectProductHunt() {
+  console.log('\n🔄 开始 Product Hunt 数据采集...\n');
+
+  const results = [];
+  const seenUrls = new Set();
+
+  // 使用 Product Hunt 的每日榜单 API
+  const today = new Date().toISOString().split('T')[0];
+
+  try {
+    // 获取当日热门产品
+    const url = `https://www.producthunt.com/v2/api/graphql?query={
+      trendingProducts(date: "${today}", limit: 50) {
+        edges {
+          node {
+            id
+            name
+            tagline
+            url
+            votesCount
+            topics {
+              edges {
+                node {
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+    }`;
+
+    const response = await fetchWithRateLimit(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'ASIP/1.0',
+      },
+    }, config.productHunt.rateLimitDelay);
+
+    if (!response.ok) {
+      console.log(`  ⚠️ Status: ${response.status}, 尝试备用方法...`);
+      // 备用：尝试简单 HTML 抓取
+      return await collectProductHuntFallback();
+    }
+
+    const data = await response.json();
+    const products = data?.data?.trendingProducts?.edges || [];
+
+    for (const edge of products) {
+      const p = edge.node;
+      const url = `https://producthunt.com${p.url}`;
+
+      if (seenUrls.has(url)) continue;
+      seenUrls.add(url);
+
+      // 检查是否包含 AI/Agent 相关关键词
+      const text = `${p.name} ${p.tagline}`.toLowerCase();
+      const isRelevant = config.productHunt.searchQueries.some(
+        q => text.includes(q.toLowerCase())
+      );
+
+      if (isRelevant) {
+        const topics = p.topics?.edges?.map(e => e.node.name) || [];
+        results.push({
+          source: 'ProductHunt',
+          source_type: 'product',
+          source_url: url,
+          project_name: p.name,
+          description: p.tagline,
+          stars: p.votesCount || 0,
+          topics: ['ProductHunt', ...topics],
+          collected_at: new Date().toISOString(),
+        });
+      }
+    }
+
+    console.log(`  ✓ Found ${results.length} relevant products`);
+
+  } catch (error) {
+    console.error(`  ✗ Error: ${error.message}`);
+    // 尝试备用方法
+    return await collectProductHuntFallback();
+  }
+
+  console.log(`\n✅ Product Hunt: 共采集 ${results.length} 个产品`);
+  return results;
+}
+
+/**
+ * Product Hunt 备用抓取方法 (简单 HTML 解析)
+ */
+async function collectProductHuntFallback() {
+  const results = [];
+  const seenUrls = new Set();
+
+  try {
+    const url = 'https://www.producthunt.com';
+    const response = await fetchWithRateLimit(url, {
+      headers: {
+        'Accept': 'text/html',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+    }, 2000);
+
+    if (!response.ok) {
+      console.log(`  ⚠️ Fallback failed: ${response.status}`);
+      return results;
+    }
+
+    const html = await response.text();
+
+    // 提取产品名称和描述
+    const namePattern = /"name":"([^"]+)"/g;
+    const taglinePattern = /"tagline":"([^"]+)"/g;
+
+    const names = [];
+    const taglines = [];
+
+    let match;
+    while ((match = namePattern.exec(html)) !== null && names.length < 20) {
+      names.push(match[1]);
+    }
+    while ((match = taglinePattern.exec(html)) !== null && taglines.length < 20) {
+      taglines.push(match[1]);
+    }
+
+    // 组合
+    const minLen = Math.min(names.length, taglines.length);
+    for (let i = 0; i < minLen; i++) {
+      const text = `${names[i]} ${taglines[i]}`.toLowerCase();
+      const isRelevant = config.productHunt.searchQueries.some(
+        q => text.includes(q.toLowerCase())
+      );
+
+      if (isRelevant) {
+        results.push({
+          source: 'ProductHunt',
+          source_type: 'product',
+          source_url: `https://producthunt.com`,
+          project_name: names[i],
+          description: taglines[i],
+          stars: 0,
+          topics: ['ProductHunt'],
+          collected_at: new Date().toISOString(),
+        });
+      }
+    }
+
+  } catch (error) {
+    console.error(`  ✗ Fallback Error: ${error.message}`);
+  }
+
+  console.log(`\n✅ Product Hunt (fallback): 共采集 ${results.length} 个产品`);
+  return results;
+}
+
+/**
  * 主采集函数
  */
-async function collectAll(sources = ['github', 'hackernews', 'reddit']) {
+async function collectAll(sources = ['github', 'hackernews', 'reddit', 'producthunt']) {
   console.log('='.repeat(50));
   console.log('🚀 ASIP 自动化数据采集开始');
   console.log('='.repeat(50));
@@ -344,6 +504,11 @@ async function collectAll(sources = ['github', 'hackernews', 'reddit']) {
     allData.push(...redditData);
   }
 
+  if (sources.includes('producthunt')) {
+    const phData = await collectProductHunt();
+    allData.push(...phData);
+  }
+
   // 去重
   const seen = new Set();
   const deduped = allData.filter(item => {
@@ -363,6 +528,7 @@ async function collectAll(sources = ['github', 'hackernews', 'reddit']) {
   console.log(`   - GitHub: ${deduped.filter(d => d.source === 'GitHub').length}`);
   console.log(`   - Hacker News: ${deduped.filter(d => d.source === 'HackerNews').length}`);
   console.log(`   - Reddit: ${deduped.filter(d => d.source === 'Reddit').length}`);
+  console.log(`   - Product Hunt: ${deduped.filter(d => d.source === 'ProductHunt').length}`);
   console.log(`\n💾 已保存到: ${outputFile}`);
   console.log('='.repeat(50));
 
@@ -372,7 +538,7 @@ async function collectAll(sources = ['github', 'hackernews', 'reddit']) {
 // 如果直接运行
 if (require.main === module) {
   const sources = process.argv.slice(2);
-  collectAll(sources.length > 0 ? sources : ['github']).catch(console.error);
+  collectAll(sources.length > 0 ? sources : ['github', 'hackernews', 'reddit', 'producthunt']).catch(console.error);
 }
 
-module.exports = { collectAll, collectGitHub, collectHackerNews, collectReddit };
+module.exports = { collectAll, collectGitHub, collectHackerNews, collectReddit, collectProductHunt };
